@@ -1,21 +1,21 @@
 <#
 .SYNOPSIS
-    Skrypt do sprawdzania statusu MFA użytkowników w Microsoft 365 / Entra ID
+    Skrypt do sprawdzania statusu MFA uzytkownikow w Microsoft 365 / Entra ID
 
 .DESCRIPTION
-    Skrypt automatycznie instaluje wymagane moduły Microsoft Graph,
-    łączy się z Entra ID i generuje raport pokazujący status MFA
-    dla wszystkich użytkowników w organizacji.
+    Skrypt automatycznie instaluje wymagane moduly Microsoft Graph,
+    laczy sie z Entra ID i generuje raport pokazujacy status MFA
+    dla wszystkich uzytkownikow w organizacji.
 
 .NOTES
     Nazwa pliku: verifyMFA.ps1
     Autor: Automatycznie wygenerowany
-    Wymagania: PowerShell 5.1 lub wyższy, uprawnienia administratora
+    Wymagania: PowerShell 5.1 lub wyzszy, uprawnienia administratora
 #>
 
 #Requires -Version 5.1
 
-# Kolory dla lepszej czytelności
+# Kolory dla lepszej czytelnoci
 $ErrorActionPreference = "Stop"
 
 function Write-ColorOutput {
@@ -27,7 +27,7 @@ function Write-ColorOutput {
 }
 
 function Install-RequiredModules {
-    Write-ColorOutput "`n=== Sprawdzanie i instalacja wymaganych modułów ===" -Color Cyan
+    Write-ColorOutput "`n=== Sprawdzanie i instalacja wymaganych modulow ===" -Color Cyan
 
     $requiredModules = @(
         "Microsoft.Graph.Authentication",
@@ -36,37 +36,37 @@ function Install-RequiredModules {
     )
 
     foreach ($module in $requiredModules) {
-        Write-ColorOutput "Sprawdzanie modułu: $module" -Color Yellow
+        Write-ColorOutput "Sprawdzanie modulu: $module" -Color Yellow
 
         $installedModule = Get-Module -ListAvailable -Name $module
 
         if (-not $installedModule) {
-            Write-ColorOutput "Instalowanie modułu: $module..." -Color Yellow
+            Write-ColorOutput "Instalowanie modulu: $module..." -Color Yellow
             try {
                 Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
-                Write-ColorOutput "✓ Moduł $module został zainstalowany pomyślnie" -Color Green
+                Write-ColorOutput "[OK] Modul $module zostal zainstalowany pomyslnie" -Color Green
             }
             catch {
-                Write-ColorOutput "✗ Błąd podczas instalacji modułu $module : $_" -Color Red
+                Write-ColorOutput "[BLAD] Blad podczas instalacji modulu ${module}: $_" -Color Red
                 throw
             }
         }
         else {
-            Write-ColorOutput "✓ Moduł $module jest już zainstalowany" -Color Green
+            Write-ColorOutput "[OK] Modul $module jest juz zainstalowany" -Color Green
         }
 
-        # Import modułu
+        # Import modulu
         Import-Module $module -ErrorAction Stop
     }
 
-    Write-ColorOutput "`n✓ Wszystkie wymagane moduły są gotowe`n" -Color Green
+    Write-ColorOutput "`n[OK] Wszystkie wymagane moduly sa gotowe`n" -Color Green
 }
 
 function Connect-ToEntraID {
-    Write-ColorOutput "=== Łączenie z Entra ID (Azure AD) ===" -Color Cyan
+    Write-ColorOutput "=== Laczenie z Entra ID (Azure AD) ===" -Color Cyan
 
     try {
-        # Wymagane uprawnienia do odczytu użytkowników i informacji o MFA
+        # Wymagane uprawnienia do odczytu uzytkownikow i informacji o MFA
         $scopes = @(
             "User.Read.All",
             "UserAuthenticationMethod.Read.All",
@@ -74,30 +74,30 @@ function Connect-ToEntraID {
         )
 
         Write-ColorOutput "Logowanie do Microsoft Graph..." -Color Yellow
-        Write-ColorOutput "Zostaniesz poproszony o zalogowanie się w przeglądarce." -Color Yellow
+        Write-ColorOutput "Zostaniesz poproszony o zalogowanie sie w przegladarce." -Color Yellow
 
         Connect-MgGraph -Scopes $scopes -NoWelcome
 
         $context = Get-MgContext
-        Write-ColorOutput "✓ Połączono pomyślnie" -Color Green
+        Write-ColorOutput "[OK] Polaczono pomyslnie" -Color Green
         Write-ColorOutput "  Tenant: $($context.TenantId)" -Color Gray
         Write-ColorOutput "  Konto: $($context.Account)`n" -Color Gray
     }
     catch {
-        Write-ColorOutput "✗ Błąd podczas łączenia z Entra ID: $_" -Color Red
+        Write-ColorOutput "[BLAD] Blad podczas laczenia z Entra ID: $_" -Color Red
         throw
     }
 }
 
 function Get-MFAStatus {
-    Write-ColorOutput "=== Pobieranie informacji o użytkownikach i statusie MFA ===" -Color Cyan
+    Write-ColorOutput "=== Pobieranie informacji o uzytkownikach i statusie MFA ===" -Color Cyan
 
     try {
-        # Pobierz wszystkich użytkowników
-        Write-ColorOutput "Pobieranie listy użytkowników..." -Color Yellow
+        # Pobierz wszystkich uzytkownikow
+        Write-ColorOutput "Pobieranie listy uzytkownikow..." -Color Yellow
         $users = Get-MgUser -All -Property Id, DisplayName, UserPrincipalName, AccountEnabled, Mail
 
-        Write-ColorOutput "Znaleziono $($users.Count) użytkowników. Sprawdzanie statusu MFA..." -Color Yellow
+        Write-ColorOutput "Znaleziono $($users.Count) uzytkownikow. Sprawdzanie statusu MFA..." -Color Yellow
 
         $mfaReport = @()
         $counter = 0
@@ -107,10 +107,10 @@ function Get-MFAStatus {
             Write-Progress -Activity "Sprawdzanie statusu MFA" -Status "Przetwarzanie $counter z $($users.Count)" -PercentComplete (($counter / $users.Count) * 100)
 
             try {
-                # Pobierz metody uwierzytelniania dla użytkownika
+                # Pobierz metody uwierzytelniania dla uzytkownika
                 $authMethods = Get-MgUserAuthenticationMethod -UserId $user.Id -ErrorAction SilentlyContinue
 
-                # Sprawdź dostępne metody MFA
+                # Sprawdz dostepne metody MFA
                 $hasMFA = $false
                 $mfaMethods = @()
 
@@ -144,7 +144,7 @@ function Get-MFAStatus {
                     }
                 }
 
-                $mfaStatus = if ($hasMFA) { "Włączone" } else { "Wyłączone" }
+                $mfaStatus = if ($hasMFA) { "Wlaczone" } else { "Wylaczone" }
                 $methodsList = if ($mfaMethods.Count -gt 0) { $mfaMethods -join ", " } else { "Brak" }
 
                 $mfaReport += [PSCustomObject]@{
@@ -157,14 +157,14 @@ function Get-MFAStatus {
                 }
             }
             catch {
-                Write-ColorOutput "  Ostrzeżenie: Nie można pobrać danych MFA dla $($user.UserPrincipalName)" -Color Yellow
+                Write-ColorOutput "  Ostrzezenie: Nie mozna pobrac danych MFA dla $($user.UserPrincipalName)" -Color Yellow
 
                 $mfaReport += [PSCustomObject]@{
                     DisplayName       = $user.DisplayName
                     UserPrincipalName = $user.UserPrincipalName
                     Email             = $user.Mail
                     AccountEnabled    = $user.AccountEnabled
-                    MFAStatus         = "Błąd odczytu"
+                    MFAStatus         = "Blad odczytu"
                     MFAMethods        = "N/A"
                 }
             }
@@ -175,7 +175,7 @@ function Get-MFAStatus {
         return $mfaReport
     }
     catch {
-        Write-ColorOutput "✗ Błąd podczas pobierania informacji o MFA: $_" -Color Red
+        Write-ColorOutput "[BLAD] Blad podczas pobierania informacji o MFA: $_" -Color Red
         throw
     }
 }
@@ -191,89 +191,89 @@ function Show-MFAReport {
 
     # Statystyki
     $totalUsers = $Report.Count
-    $mfaEnabled = ($Report | Where-Object { $_.MFAStatus -eq "Włączone" }).Count
-    $mfaDisabled = ($Report | Where-Object { $_.MFAStatus -eq "Wyłączone" }).Count
-    $mfaError = ($Report | Where-Object { $_.MFAStatus -eq "Błąd odczytu" }).Count
+    $mfaEnabled = ($Report | Where-Object { $_.MFAStatus -eq "Wlaczone" }).Count
+    $mfaDisabled = ($Report | Where-Object { $_.MFAStatus -eq "Wylaczone" }).Count
+    $mfaError = ($Report | Where-Object { $_.MFAStatus -eq "Blad odczytu" }).Count
     $activeUsers = ($Report | Where-Object { $_.AccountEnabled -eq $true }).Count
 
     Write-ColorOutput "=== STATYSTYKI ===" -Color Yellow
-    Write-ColorOutput "Łączna liczba użytkowników: $totalUsers" -Color White
+    Write-ColorOutput "Laczna liczba uzytkownikow: $totalUsers" -Color White
     Write-ColorOutput "Aktywne konta: $activeUsers" -Color White
-    Write-ColorOutput "MFA włączone: $mfaEnabled ($([math]::Round(($mfaEnabled/$totalUsers)*100, 2))%)" -Color Green
-    Write-ColorOutput "MFA wyłączone: $mfaDisabled ($([math]::Round(($mfaDisabled/$totalUsers)*100, 2))%)" -Color Red
+    Write-ColorOutput "MFA wlaczone: $mfaEnabled ($([math]::Round(($mfaEnabled/$totalUsers)*100, 2))%)" -Color Green
+    Write-ColorOutput "MFA wylaczone: $mfaDisabled ($([math]::Round(($mfaDisabled/$totalUsers)*100, 2))%)" -Color Red
     if ($mfaError -gt 0) {
-        Write-ColorOutput "Błędy odczytu: $mfaError" -Color Yellow
+        Write-ColorOutput "Bledy odczytu: $mfaError" -Color Yellow
     }
 
-    # Wyświetl szczegółowy raport
-    Write-ColorOutput "`n=== UŻYTKOWNICY Z WYŁĄCZONYM MFA ===" -Color Red
-    $disabledMFA = $Report | Where-Object { $_.MFAStatus -eq "Wyłączone" -and $_.AccountEnabled -eq $true }
+    # Wyswietl szczegolowy raport
+    Write-ColorOutput "`n=== UZYTKOWNICY Z WYLACZONYM MFA ===" -Color Red
+    $disabledMFA = $Report | Where-Object { $_.MFAStatus -eq "Wylaczone" -and $_.AccountEnabled -eq $true }
 
     if ($disabledMFA.Count -gt 0) {
         $disabledMFA | Format-Table -AutoSize -Property DisplayName, UserPrincipalName, Email, AccountEnabled
     }
     else {
-        Write-ColorOutput "✓ Wszyscy aktywni użytkownicy mają włączone MFA!" -Color Green
+        Write-ColorOutput "[OK] Wszyscy aktywni uzytkownicy maja wlaczone MFA!" -Color Green
     }
 
-    Write-ColorOutput "`n=== UŻYTKOWNICY Z WŁĄCZONYM MFA ===" -Color Green
-    $enabledMFA = $Report | Where-Object { $_.MFAStatus -eq "Włączone" }
+    Write-ColorOutput "`n=== UZYTKOWNICY Z WLACZONYM MFA ===" -Color Green
+    $enabledMFA = $Report | Where-Object { $_.MFAStatus -eq "Wlaczone" }
 
     if ($enabledMFA.Count -gt 0) {
         $enabledMFA | Format-Table -AutoSize -Property DisplayName, UserPrincipalName, MFAMethods
     }
     else {
-        Write-ColorOutput "Brak użytkowników z włączonym MFA" -Color Yellow
+        Write-ColorOutput "Brak uzytkownikow z wlaczonym MFA" -Color Yellow
     }
 
     # Zapisz raport do pliku
     $reportPath = "MFA_Report_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
     $Report | Export-Csv -Path $reportPath -NoTypeInformation -Encoding UTF8
-    Write-ColorOutput "`n✓ Raport zapisano do pliku: $reportPath" -Color Green
+    Write-ColorOutput "`n[OK] Raport zapisano do pliku: $reportPath" -Color Green
 
-    # Pełny raport w konsoli
-    Write-ColorOutput "`n=== PEŁNY RAPORT (WSZYSCY UŻYTKOWNICY) ===" -Color Cyan
+    # Pelny raport w konsoli
+    Write-ColorOutput "`n=== PELNY RAPORT (WSZYSCY UZYTKOWNICY) ===" -Color Cyan
     $Report | Format-Table -AutoSize -Property DisplayName, UserPrincipalName, AccountEnabled, MFAStatus, MFAMethods
 }
 
 # ============================================
-# GŁÓWNA FUNKCJA SKRYPTU
+# GLOWNA FUNKCJA SKRYPTU
 # ============================================
 
 function Main {
     Clear-Host
 
     Write-ColorOutput @"
-╔════════════════════════════════════════════════════════════╗
-║         SKRYPT WERYFIKACJI MFA - ENTRA ID / M365           ║
-╚════════════════════════════════════════════════════════════╝
+================================================================
+         SKRYPT WERYFIKACJI MFA - ENTRA ID / M365
+================================================================
 "@ -Color Cyan
 
     try {
-        # Krok 1: Instalacja modułów
+        # Krok 1: Instalacja modulow
         Install-RequiredModules
 
-        # Krok 2: Połączenie z Entra ID
+        # Krok 2: Polaczenie z Entra ID
         Connect-ToEntraID
 
         # Krok 3: Pobranie statusu MFA
         $mfaReport = Get-MFAStatus
 
-        # Krok 4: Wyświetlenie raportu
+        # Krok 4: Wyswietlenie raportu
         Show-MFAReport -Report $mfaReport
 
-        Write-ColorOutput "`n✓ Skrypt zakończony pomyślnie!" -Color Green
+        Write-ColorOutput "`n[OK] Skrypt zakonczony pomyslnie!" -Color Green
 
-        # Rozłącz się z Microsoft Graph
-        Write-ColorOutput "`nRozłączanie z Microsoft Graph..." -Color Yellow
+        # Rozlacz sie z Microsoft Graph
+        Write-ColorOutput "`nRozlaczanie z Microsoft Graph..." -Color Yellow
         Disconnect-MgGraph | Out-Null
-        Write-ColorOutput "✓ Rozłączono`n" -Color Green
+        Write-ColorOutput "[OK] Rozlaczono`n" -Color Green
     }
     catch {
-        Write-ColorOutput "`n✗ BŁĄD: $_" -Color Red
-        Write-ColorOutput "Szczegóły: $($_.Exception.Message)" -Color Red
+        Write-ColorOutput "`n[BLAD] BLAD: $_" -Color Red
+        Write-ColorOutput "Szczegoly: $($_.Exception.Message)" -Color Red
 
-        # Spróbuj rozłączyć się w przypadku błędu
+        # Sprobuj rozlaczyc sie w przypadku bledu
         try {
             Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
         }

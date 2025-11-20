@@ -115,31 +115,70 @@ function Get-MFAStatus {
                 $mfaMethods = @()
 
                 foreach ($method in $authMethods) {
-                    $methodType = $method.AdditionalProperties["@odata.type"]
+                    # Sprobuj pobrac typ metody z roznych zrodel
+                    $methodType = $null
 
-                    switch ($methodType) {
-                        "#microsoft.graph.phoneAuthenticationMethod" {
-                            $hasMFA = $true
-                            $mfaMethods += "Telefon"
+                    # Metoda 1: Sprawdz AdditionalProperties
+                    if ($method.AdditionalProperties -and $method.AdditionalProperties.ContainsKey("@odata.type")) {
+                        $methodType = $method.AdditionalProperties["@odata.type"]
+                    }
+
+                    # Metoda 2: Sprawdz bezposrednio typ obiektu .NET
+                    if (-not $methodType) {
+                        $typeName = $method.GetType().Name
+                        if ($typeName -match "Phone") {
+                            $methodType = "#microsoft.graph.phoneAuthenticationMethod"
                         }
-                        "#microsoft.graph.microsoftAuthenticatorAuthenticationMethod" {
-                            $hasMFA = $true
-                            $mfaMethods += "Microsoft Authenticator"
+                        elseif ($typeName -match "MicrosoftAuthenticator") {
+                            $methodType = "#microsoft.graph.microsoftAuthenticatorAuthenticationMethod"
                         }
-                        "#microsoft.graph.fido2AuthenticationMethod" {
-                            $hasMFA = $true
-                            $mfaMethods += "FIDO2"
+                        elseif ($typeName -match "Fido2") {
+                            $methodType = "#microsoft.graph.fido2AuthenticationMethod"
                         }
-                        "#microsoft.graph.windowsHelloForBusinessAuthenticationMethod" {
-                            $hasMFA = $true
-                            $mfaMethods += "Windows Hello"
+                        elseif ($typeName -match "WindowsHello") {
+                            $methodType = "#microsoft.graph.windowsHelloForBusinessAuthenticationMethod"
                         }
-                        "#microsoft.graph.emailAuthenticationMethod" {
-                            $mfaMethods += "Email (nie MFA)"
+                        elseif ($typeName -match "Email") {
+                            $methodType = "#microsoft.graph.emailAuthenticationMethod"
                         }
-                        "#microsoft.graph.softwareOathAuthenticationMethod" {
-                            $hasMFA = $true
-                            $mfaMethods += "Software OATH"
+                        elseif ($typeName -match "SoftwareOath") {
+                            $methodType = "#microsoft.graph.softwareOathAuthenticationMethod"
+                        }
+                    }
+
+                    # Przetwarzaj wykryta metode
+                    if ($methodType) {
+                        switch ($methodType) {
+                            "#microsoft.graph.phoneAuthenticationMethod" {
+                                $hasMFA = $true
+                                $mfaMethods += "Telefon"
+                            }
+                            "#microsoft.graph.microsoftAuthenticatorAuthenticationMethod" {
+                                $hasMFA = $true
+                                $mfaMethods += "Microsoft Authenticator"
+                            }
+                            "#microsoft.graph.fido2AuthenticationMethod" {
+                                $hasMFA = $true
+                                $mfaMethods += "FIDO2"
+                            }
+                            "#microsoft.graph.windowsHelloForBusinessAuthenticationMethod" {
+                                $hasMFA = $true
+                                $mfaMethods += "Windows Hello"
+                            }
+                            "#microsoft.graph.emailAuthenticationMethod" {
+                                $mfaMethods += "Email (nie MFA)"
+                            }
+                            "#microsoft.graph.softwareOathAuthenticationMethod" {
+                                $hasMFA = $true
+                                $mfaMethods += "Software OATH"
+                            }
+                            "#microsoft.graph.passwordAuthenticationMethod" {
+                                # Haslo nie jest metoda MFA - ignorujemy
+                            }
+                            default {
+                                # Nieznana metoda - zapisz dla informacji
+                                $mfaMethods += "Nieznana metoda: $methodType"
+                            }
                         }
                     }
                 }
